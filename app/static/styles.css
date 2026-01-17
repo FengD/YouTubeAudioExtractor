@@ -1,0 +1,156 @@
+:root {
+  --bg: #0b1020;
+  --card: rgba(255, 255, 255, 0.06);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.68);
+  --border: rgba(255, 255, 255, 0.14);
+  --accent: #7c5cff;
+  --accent2: #22c55e;
+  --danger: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial,
+    "Apple Color Emoji",
+    "Segoe UI Emoji";
+  color: var(--text);
+  background: radial-gradient(1200px 600px at 20% 10%, rgba(124, 92, 255, 0.35), transparent 60%),
+    radial-gradient(900px 500px at 80% 30%, rgba(34, 197, 94, 0.22), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 48px 18px 28px;
+}
+
+.header {
+  margin-bottom: 18px;
+}
+
+.brand {
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.card {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  backdrop-filter: blur(14px);
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.input {
+  flex: 1 1 520px;
+  min-width: 260px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(124, 92, 255, 0.75);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+}
+
+.button {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  border: 1px solid rgba(124, 92, 255, 0.55);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.95), rgba(124, 92, 255, 0.75));
+  color: white;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.button:hover {
+  filter: brightness(1.05);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.hint {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hint code {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.status {
+  margin-top: 16px;
+  min-height: 24px;
+}
+
+.statusText {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.statusText.ok {
+  color: rgba(34, 197, 94, 0.95);
+}
+
+.statusText.err {
+  color: rgba(239, 68, 68, 0.95);
+}
+
+.footer {
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.footer code {
+  color: rgba(255, 255, 255, 0.85);
+}
+

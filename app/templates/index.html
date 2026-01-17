@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YouTube Audio Extractor</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <div class="brand">YouTube Audio Extractor</div>
+        <div class="subtitle">Paste a YouTube link, download an MP3.</div>
+      </header>
+
+      <section class="card">
+        <label class="label" for="url">YouTube URL</label>
+        <div class="row">
+          <input
+            id="url"
+            class="input"
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="btn" class="button" type="button">Extract MP3</button>
+        </div>
+        <div id="hint" class="hint">
+          Tip: make sure your system has <code>ffmpeg</code> installed.
+        </div>
+      </section>
+
+      <section class="status">
+        <div id="status" class="statusText"></div>
+      </section>
+
+      <footer class="footer">
+        <div>
+          Built with <code>FastAPI</code> + <code>yt-dlp</code>.
+        </div>
+      </footer>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+
