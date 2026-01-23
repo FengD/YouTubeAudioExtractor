@@ -34,6 +34,7 @@ logger = setup_logging()
 
 class ExtractRequest(BaseModel):
     url: HttpUrl
+    format: Optional[str] = None
 
 
 def _sanitize_filename(name: str, max_len: int = 120) -> str:
@@ -79,7 +80,14 @@ def _request_ctx(request: Request) -> dict:
     }
 
 
-def _extract_mp3_file_response(url: str, *, request: Request) -> FileResponse:
+def _normalize_audio_format(value: Optional[str]) -> str:
+    fmt = (value or "mp3").strip().lower()
+    if fmt not in {"mp3", "wav"}:
+        raise HTTPException(status_code=400, detail="Format must be either 'mp3' or 'wav'.")
+    return fmt
+
+
+def _extract_audio_file_response(url: str, *, request: Request, audio_format: str) -> FileResponse:
     tmp_dir = Path(tempfile.mkdtemp(prefix="yt-extract-"))
 
     try:
@@ -101,44 +109,46 @@ def _extract_mp3_file_response(url: str, *, request: Request) -> FileResponse:
         title = _sanitize_filename(info.get("title") or "audio")
         outtmpl = str(tmp_dir / f"{title}.%(ext)s")
 
+        postprocessor = {
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": audio_format,
+        }
+        if audio_format == "mp3":
+            postprocessor["preferredquality"] = "192"
+
         ydl_opts = {
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
             "format": "bestaudio/best",
             "outtmpl": outtmpl,
-            "postprocessors": [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                    "preferredquality": "192",
-                }
-            ],
+            "postprocessors": [postprocessor],
         }
 
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([str(url)])
 
-        mp3_path: Optional[Path] = None
-        for p in tmp_dir.glob("*.mp3"):
-            mp3_path = p
+        output_path: Optional[Path] = None
+        for p in tmp_dir.glob(f"*.{audio_format}"):
+            output_path = p
             break
 
-        if not mp3_path or not mp3_path.exists():
+        if not output_path or not output_path.exists():
             raise HTTPException(
                 status_code=500,
-                detail="MP3 was not created. Is ffmpeg installed and available on PATH?",
+                detail=f"{audio_format.upper()} was not created. Is ffmpeg installed and available on PATH?",
             )
 
-        download_name = f"{title}.mp3"
+        download_name = f"{title}.{audio_format}"
         duration_ms = int((time.perf_counter() - start) * 1000)
         logger.info(
             "extract.success",
             extra={"ctx": {**ctx, "status": "success", "duration_ms": duration_ms, "filename": download_name}},
         )
+        media_type = "audio/mpeg" if audio_format == "mp3" else "audio/wav"
         return FileResponse(
-            path=str(mp3_path),
-            media_type="audio/mpeg",
+            path=str(output_path),
+            media_type=media_type,
             filename=download_name,
             background=BackgroundTask(shutil.rmtree, str(tmp_dir), ignore_errors=True),
         )
@@ -219,18 +229,21 @@ async def health(request: Request):
     return {"ok": True}
 
 @app.get("/api/extract")
-async def extract_audio_get(request: Request, url: HttpUrl):
+async def extract_audio_get(request: Request, url: HttpUrl, format: Optional[str] = None):
     # curl-friendly: GET /api/extract?url=...
-    return _extract_mp3_file_response(str(url), request=request)
+    audio_format = _normalize_audio_format(format)
+    return _extract_audio_file_response(str(url), request=request, audio_format=audio_format)
 
 @app.post("/api/extract")
-async def extract_audio_post(request: Request, payload: ExtractRequest):
+async def extract_audio_post(request: Request, payload: ExtractRequest, format: Optional[str] = None):
     # JSON API: { "url": "https://..." }
-    return _extract_mp3_file_response(str(payload.url), request=request)
+    audio_format = _normalize_audio_format(payload.format or format)
+    return _extract_audio_file_response(str(payload.url), request=request, audio_format=audio_format)
 
 
 @app.post("/api/extract/form")
-async def extract_audio_form(request: Request, url: HttpUrl = Form(...)):
+async def extract_audio_form(request: Request, url: HttpUrl = Form(...), format: Optional[str] = Form(None)):
     # Form API: url=<youtube-url>
-    return _extract_mp3_file_response(str(url), request=request)
+    audio_format = _normalize_audio_format(format)
+    return _extract_audio_file_response(str(url), request=request, audio_format=audio_format)
 

@@ -83,10 +83,30 @@ body {
   padding: 12px 14px;
   background: rgba(0, 0, 0, 0.22);
   color: var(--text);
+  font: inherit;
   outline: none;
 }
 
 .input:focus {
+  border-color: rgba(124, 92, 255, 0.75);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+}
+
+.select {
+  flex: 0 0 auto;
+  min-width: 120px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  outline: none;
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.select:focus {
   border-color: rgba(124, 92, 255, 0.75);
   box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
 }

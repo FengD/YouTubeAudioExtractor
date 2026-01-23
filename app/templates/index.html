@@ -10,7 +10,7 @@
     <main class="container">
       <header class="header">
         <div class="brand">YouTube Audio Extractor</div>
-        <div class="subtitle">Paste a YouTube link, download an MP3.</div>
+        <div class="subtitle">Paste a YouTube link, download MP3 or WAV.</div>
       </header>
 
       <section class="card">
@@ -24,7 +24,11 @@
             autocomplete="off"
             spellcheck="false"
           />
-          <button id="btn" class="button" type="button">Extract MP3</button>
+          <select id="format" class="select" aria-label="Audio format">
+            <option value="mp3" selected>MP3</option>
+            <option value="wav">WAV</option>
+          </select>
+          <button id="btn" class="button" type="button">Extract audio</button>
         </div>
         <div id="hint" class="hint">
           Tip: make sure your system has <code>ffmpeg</code> installed.
