@@ -1,5 +1,4 @@
 import logging
-import re
 import shutil
 import tempfile
 import time
@@ -16,8 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, HttpUrl
 from starlette.background import BackgroundTask
-from yt_dlp import YoutubeDL
 
+from app.core import AudioExtractor
 from app.logging_config import get_client_id, get_client_ip, setup_logging
 
 
@@ -35,16 +34,6 @@ logger = setup_logging()
 class ExtractRequest(BaseModel):
     url: HttpUrl
     format: Optional[str] = None
-
-
-def _sanitize_filename(name: str, max_len: int = 120) -> str:
-    name = name.strip()
-    name = re.sub(r"\s+", " ", name)
-    name = re.sub(r"[^a-zA-Z0-9 \-_\.\(\)\[\]]+", "", name)
-    name = name.strip(" .-_")
-    if not name:
-        name = "audio"
-    return name[:max_len]
 
 
 def _redact_youtube_url_for_logs(url: str) -> str:
@@ -81,10 +70,10 @@ def _request_ctx(request: Request) -> dict:
 
 
 def _normalize_audio_format(value: Optional[str]) -> str:
-    fmt = (value or "mp3").strip().lower()
-    if fmt not in {"mp3", "wav"}:
-        raise HTTPException(status_code=400, detail="Format must be either 'mp3' or 'wav'.")
-    return fmt
+    try:
+        return AudioExtractor.normalize_audio_format(value)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 def _extract_audio_file_response(url: str, *, request: Request, audio_format: str) -> FileResponse:
@@ -96,50 +85,9 @@ def _extract_audio_file_response(url: str, *, request: Request, audio_format: st
         ctx["youtube_url"] = _redact_youtube_url_for_logs(url)
         logger.info("extract.start", extra={"ctx": ctx})
 
-        # First get metadata (title) without downloading so we can name the file nicely.
-        with YoutubeDL(
-            {
-                "quiet": True,
-                "no_warnings": True,
-                "noplaylist": True,
-            }
-        ) as ydl:
-            info = ydl.extract_info(str(url), download=False)
+        extractor = AudioExtractor(output_dir=tmp_dir)
+        output_path, download_name = extractor.extract_audio(url, audio_format)
 
-        title = _sanitize_filename(info.get("title") or "audio")
-        outtmpl = str(tmp_dir / f"{title}.%(ext)s")
-
-        postprocessor = {
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": audio_format,
-        }
-        if audio_format == "mp3":
-            postprocessor["preferredquality"] = "192"
-
-        ydl_opts = {
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
-            "format": "bestaudio/best",
-            "outtmpl": outtmpl,
-            "postprocessors": [postprocessor],
-        }
-
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([str(url)])
-
-        output_path: Optional[Path] = None
-        for p in tmp_dir.glob(f"*.{audio_format}"):
-            output_path = p
-            break
-
-        if not output_path or not output_path.exists():
-            raise HTTPException(
-                status_code=500,
-                detail=f"{audio_format.upper()} was not created. Is ffmpeg installed and available on PATH?",
-            )
-
-        download_name = f"{title}.{audio_format}"
         duration_ms = int((time.perf_counter() - start) * 1000)
         logger.info(
             "extract.success",
@@ -156,6 +104,17 @@ def _extract_audio_file_response(url: str, *, request: Request, audio_format: st
         logger.warning("extract.fail", extra={"ctx": {**_request_ctx(request), "status": "failed"}})
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
+    except ValueError as e:
+        logger.warning("extract.fail", extra={"ctx": {**_request_ctx(request), "status": "failed", "error": str(e)}})
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        logger.exception(
+            "extract.error",
+            extra={"ctx": {**_request_ctx(request), "status": "failed", "error": str(e)}},
+        )
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.exception(
             "extract.error",

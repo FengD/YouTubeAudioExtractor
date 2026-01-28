@@ -93,8 +93,91 @@ curl -L -X POST http://localhost:8000/api/extract/form \
   -OJ
 ```
 
+### CLI Usage
+
+The project includes a command-line interface for local audio extraction:
+
+```bash
+# Basic usage - extract to current directory
+python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Specify output format (mp3 or wav)
+python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID" --format wav
+
+# Specify output file path
+python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID" --output audio.mp3
+
+# Specify output directory
+python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID" --output-dir /path/to/output
+```
+
+CLI options:
+- `--format`, `-f`: Audio format (mp3 or wav), default is mp3
+- `--output`, `-o`: Output file path
+- `--output-dir`, `-d`: Output directory (used when --output is not specified)
+
+### MCP Server
+
+The project includes an MCP (Model Context Protocol) server for integration with LLM workflows.
+
+#### Running the MCP Server
+
+```bash
+python -m app.mcp_server
+```
+
+The MCP server exposes two tools:
+
+1. **extract_audio**: Extract audio from a YouTube URL
+   - Parameters:
+     - `url` (required): YouTube video URL
+     - `format` (optional): Audio format ('mp3' or 'wav'), default is 'mp3'
+     - `output_path` (optional): Output file path. If not provided, uses a temporary file.
+
+2. **extract_audio_to_file**: Extract audio to a specific file path
+   - Parameters:
+     - `url` (required): YouTube video URL
+     - `output_path` (required): Target output file path
+     - `format` (optional): Audio format ('mp3' or 'wav'), default is 'mp3'
+
+#### MCP Server Configuration
+
+To use the MCP server with an MCP client (e.g., Claude Desktop, Cursor), add it to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "youtube-audio-extractor": {
+      "command": "python",
+      "args": ["-m", "app.mcp_server"]
+    }
+  }
+}
+```
+
+The server uses stdio transport by default, which is compatible with most MCP clients.
+
+### Testing
+
+Run unit tests using pytest:
+
+```bash
+# Install test dependencies (if using uv)
+uv pip install pytest
+
+# Run all tests
+pytest tests/
+
+# Run specific test file
+pytest tests/test_core.py
+
+# Run with verbose output
+pytest tests/ -v
+```
+
 ### Notes
 
 - This app uses `yt-dlp` to download audio and `ffmpeg` to convert to MP3.
 - Some videos may be unavailable due to region/age restrictions or DRM.
+- The core extraction logic is encapsulated in `app.core.AudioExtractor` for reuse across CLI, web API, and MCP server.
 
