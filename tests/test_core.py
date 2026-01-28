@@ -62,6 +62,33 @@ class TestAudioExtractor:
                 assert mock_ydl.extract_info.called
                 assert mock_ydl.download.called
 
+    @patch("app.core.tempfile.mkdtemp")
+    @patch("app.core.YoutubeDL")
+    def test_extract_audio_uses_output_dir(self, mock_ydl_class, mock_mkdtemp):
+        """Test that output_dir is used when provided."""
+        mock_ydl = MagicMock()
+        mock_ydl_class.return_value.__enter__.return_value = mock_ydl
+
+        mock_info = {"title": "Test Video"}
+        mock_ydl.extract_info.return_value = mock_info
+        mock_ydl.download.return_value = None
+
+        mock_mkdtemp.side_effect = AssertionError("tempfile.mkdtemp should not be called")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            extractor = AudioExtractor(output_dir=output_dir)
+
+            with patch("pathlib.Path.glob") as mock_glob:
+                mock_output_file = output_dir / "Test Video.mp3"
+                mock_output_file.touch()
+                mock_glob.return_value = [mock_output_file]
+
+                output_path, filename = extractor.extract_audio("https://youtube.com/watch?v=test", "mp3")
+
+                assert output_path == mock_output_file
+                assert filename == "Test Video.mp3"
+
     @patch("app.core.YoutubeDL")
     def test_extract_audio_invalid_format(self, mock_ydl_class):
         """Test audio extraction with invalid format."""

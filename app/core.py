@@ -87,6 +87,10 @@ class AudioExtractor:
             output_dir = output_path.parent
             output_dir.mkdir(parents=True, exist_ok=True)
             use_temp = False
+        elif self.output_dir:
+            output_dir = self.output_dir
+            output_dir.mkdir(parents=True, exist_ok=True)
+            use_temp = False
         else:
             output_dir = Path(tempfile.mkdtemp(prefix="yt-extract-"))
             use_temp = True

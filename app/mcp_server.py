@@ -1,7 +1,7 @@
 """
 MCP server for YouTube audio extraction.
 """
-import tempfile
+import argparse
 from pathlib import Path
 from typing import Optional
 
@@ -107,5 +107,45 @@ def extract_audio_to_file(
         }
 
 
+def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="YouTube Audio Extractor MCP server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default="stdio",
+        help="MCP transport to use (default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Bind host for SSE transport (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Bind port for SSE transport (default: 8000)",
+    )
+    return parser.parse_args(argv)
+
+
+def run_server(transport: str, host: str, port: int) -> None:
+    if transport == "stdio":
+        mcp.run()
+        return
+    if transport == "sse":
+        try:
+            mcp.run(transport="sse", host=host, port=port)
+        except TypeError:
+            mcp.run(transport="sse")
+        return
+    raise ValueError(f"Unsupported transport: {transport}")
+
+
+def main(argv: Optional[list[str]] = None) -> None:
+    args = _parse_args(argv)
+    run_server(args.transport, args.host, args.port)
+
+
 if __name__ == "__main__":
-    mcp.run()
+    main()

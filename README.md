@@ -1,14 +1,21 @@
-## YouTube Audio Extractor (MP3)
+## InnoFrance YouTube Audio Extractor
 
-Paste a YouTube link in the web UI and download the extracted audio as an **MP3**.
+Extract YouTube audio to **MP3** or **WAV** through a web API, CLI, or MCP server.
 
 ![App screenshot](docs/example.png)
+
+### Key Features
+
+- FastAPI service with a simple web UI and JSON/form endpoints
+- CLI for local usage and automation
+- MCP server for LLM workflows (stdio or SSE transport)
+- Reusable core logic in `app.core.AudioExtractor`
 
 ### Requirements
 
 - Python 3.10+
-- `ffmpeg` installed on your system (required for MP3 conversion)
-- Python packaging tools (`pip`, `venv`) available on your system
+- `ffmpeg` installed and available on PATH
+- Network access to YouTube
 
 Install ffmpeg on Ubuntu/Debian:
 
@@ -17,33 +24,21 @@ sudo apt update
 sudo apt install -y ffmpeg
 ```
 
-If you don't have `pip` / `venv`:
+### Setup (Conda Recommended)
 
 ```bash
-sudo apt update
-sudo apt install -y python3-pip python3-venv
-```
-
-### Setup
-
-```bash
-cd /home/ding/Documents/youtube_extractor
-python3 -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Run
+### Run the Web Service
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Open:
+Open `http://localhost:8000`.
 
-- `http://localhost:8000`
-
-### API (curl)
+### API Usage (curl)
 
 Health check:
 
@@ -51,36 +46,21 @@ Health check:
 curl -s http://localhost:8000/api/health
 ```
 
-### Logging / audit trail
-
-The app logs **who** made the request, **what** happened, and whether it **succeeded or failed**.
-
-- **Request correlation**: every response includes `X-Request-Id` (you can also send your own `X-Request-Id`)
-- **Who (caller identity)**: send `X-Client-Id: my-service` (preferred) or `X-Api-Key: ...` (only partially logged)
-- **Where logs go**: stdout + rotating file at `./logs/app.log` (configurable via env)
-
-Environment variables:
-
-- **LOG_LEVEL**: `DEBUG|INFO|WARNING|ERROR` (default `INFO`)
-- **LOG_FORMAT**: `json|text` (default `json`)
-- **LOG_FILE**: path (default `./logs/app.log`)
-- **TRUST_PROXY_HEADERS**: set to `1` if running behind a proxy and you want to trust `X-Forwarded-For`
-
-Download MP3 via **POST JSON** (most reliable):
+Download MP3 via **POST JSON**:
 
 ```bash
 curl -L -X POST http://localhost:8000/api/extract \
   -H 'Content-Type: application/json' \
   -H 'X-Client-Id: my-cli' \
-  -d '{"url":"https://www.youtube.com/watch?v=VIDEO_ID"}' \
+  -d '{"url":"https://www.youtube.com/watch?v=WRvWLWfv4Ts"}' \
   -OJ
 ```
 
-Download MP3 via **GET** with URL encoding (curl-friendly):
+Download MP3 via **GET**:
 
 ```bash
 curl -L -G http://localhost:8000/api/extract \
-  --data-urlencode "url=https://www.youtube.com/watch?v=VIDEO_ID" \
+  --data-urlencode "url=https://www.youtube.com/watch?v=WRvWLWfv4Ts" \
   -OJ
 ```
 
@@ -89,26 +69,24 @@ Download MP3 via **POST form**:
 ```bash
 curl -L -X POST http://localhost:8000/api/extract/form \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data-urlencode "url=https://www.youtube.com/watch?v=VIDEO_ID" \
+  --data-urlencode "url=https://www.youtube.com/watch?v=WRvWLWfv4Ts" \
   -OJ
 ```
 
 ### CLI Usage
 
-The project includes a command-line interface for local audio extraction:
-
 ```bash
 # Basic usage - extract to current directory
-python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID"
+python -m app.cli "https://www.youtube.com/watch?v=WRvWLWfv4Ts"
 
 # Specify output format (mp3 or wav)
-python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID" --format wav
+python -m app.cli "https://www.youtube.com/watch?v=WRvWLWfv4Ts" --format wav
 
 # Specify output file path
-python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID" --output audio.mp3
+python -m app.cli "https://www.youtube.com/watch?v=WRvWLWfv4Ts" --output audio.mp3
 
 # Specify output directory
-python -m app.cli "https://www.youtube.com/watch?v=VIDEO_ID" --output-dir /path/to/output
+python -m app.cli "https://www.youtube.com/watch?v=WRvWLWfv4Ts" --output-dir /path/to/output
 ```
 
 CLI options:
@@ -116,33 +94,15 @@ CLI options:
 - `--output`, `-o`: Output file path
 - `--output-dir`, `-d`: Output directory (used when --output is not specified)
 
-### MCP Server
+### MCP Server (stdio)
 
-The project includes an MCP (Model Context Protocol) server for integration with LLM workflows.
-
-#### Running the MCP Server
+Run the MCP server over stdio:
 
 ```bash
 python -m app.mcp_server
 ```
 
-The MCP server exposes two tools:
-
-1. **extract_audio**: Extract audio from a YouTube URL
-   - Parameters:
-     - `url` (required): YouTube video URL
-     - `format` (optional): Audio format ('mp3' or 'wav'), default is 'mp3'
-     - `output_path` (optional): Output file path. If not provided, uses a temporary file.
-
-2. **extract_audio_to_file**: Extract audio to a specific file path
-   - Parameters:
-     - `url` (required): YouTube video URL
-     - `output_path` (required): Target output file path
-     - `format` (optional): Audio format ('mp3' or 'wav'), default is 'mp3'
-
-#### MCP Server Configuration
-
-To use the MCP server with an MCP client (e.g., Claude Desktop, Cursor), add it to your MCP configuration:
+Add to your MCP client configuration:
 
 ```json
 {
@@ -155,29 +115,51 @@ To use the MCP server with an MCP client (e.g., Claude Desktop, Cursor), add it 
 }
 ```
 
-The server uses stdio transport by default, which is compatible with most MCP clients.
+### MCP Server (SSE)
+
+Run the MCP server over SSE for remote deployment:
+
+```bash
+python -m app.mcp_server --transport sse --host 0.0.0.0 --port 8000
+```
+
+Use your MCP client to connect to the server host and port. The exact SSE endpoints are managed by FastMCP.
+
+![App screenshot](docs/mcp_use.png)
+
+### Logging / Audit Trail
+
+The service logs caller identity, request details, and success/failure status.
+
+- **Request correlation**: every response includes `X-Request-Id` (you can also send your own `X-Request-Id`)
+- **Caller identity**: send `X-Client-Id: my-service` (preferred) or `X-Api-Key: ...` (partially logged)
+- **Log destination**: stdout + rotating file at `./logs/app.log` (configurable)
+
+Environment variables:
+
+- **LOG_LEVEL**: `DEBUG|INFO|WARNING|ERROR` (default `INFO`)
+- **LOG_FORMAT**: `json|text` (default `json`)
+- **LOG_FILE**: path (default `./logs/app.log`)
+- **TRUST_PROXY_HEADERS**: set to `1` when running behind a proxy
 
 ### Testing
 
-Run unit tests using pytest:
+Unit tests:
 
 ```bash
-# Install test dependencies (if using uv)
-uv pip install pytest
-
-# Run all tests
 pytest tests/
+```
 
-# Run specific test file
-pytest tests/test_core.py
+Integration test (real YouTube download):
 
-# Run with verbose output
-pytest tests/ -v
+```bash
+RUN_YT_INTEGRATION=1 \
+YOUTUBE_TEST_URL="https://www.youtube.com/watch?v=WRvWLWfv4Ts" \
+pytest tests/test_integration.py -v
 ```
 
 ### Notes
 
-- This app uses `yt-dlp` to download audio and `ffmpeg` to convert to MP3.
+- This app uses `yt-dlp` to download audio and `ffmpeg` to convert formats.
 - Some videos may be unavailable due to region/age restrictions or DRM.
-- The core extraction logic is encapsulated in `app.core.AudioExtractor` for reuse across CLI, web API, and MCP server.
 

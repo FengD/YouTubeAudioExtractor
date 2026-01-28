@@ -71,6 +71,24 @@ class TestCLI:
         assert call_args[0][1] == "wav"
 
     @patch("app.cli.AudioExtractor")
+    def test_cli_extract_with_output_dir(self, mock_extractor_class):
+        """Test CLI extraction with output directory."""
+        runner = CliRunner()
+
+        mock_extractor = MagicMock()
+        mock_extractor_class.return_value = mock_extractor
+        mock_extractor.extract_audio.return_value = (Path("/tmp/test.mp3"), "test.mp3")
+
+        with runner.isolated_filesystem():
+            output_dir = Path("outputs")
+            result = runner.invoke(
+                main, ["https://youtube.com/watch?v=test", "--output-dir", str(output_dir)]
+            )
+
+            assert result.exit_code == 0
+            assert mock_extractor_class.call_args.kwargs["output_dir"] == output_dir
+
+    @patch("app.cli.AudioExtractor")
     def test_cli_extract_error(self, mock_extractor_class):
         """Test CLI extraction error handling."""
         runner = CliRunner()

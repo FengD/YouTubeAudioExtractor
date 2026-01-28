@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.mcp_server import extract_audio, extract_audio_to_file
+from app.mcp_server import extract_audio, extract_audio_to_file, main, run_server
 
 
 class TestMCPServer:
@@ -76,3 +76,21 @@ class TestMCPServer:
         assert result["success"] is False
         assert "error" in result
         assert "Extraction failed" in result["error"]
+
+    def test_run_server_stdio(self):
+        """Test stdio transport uses default run."""
+        with patch("app.mcp_server.mcp.run") as mock_run:
+            run_server("stdio", "127.0.0.1", 8000)
+            mock_run.assert_called_once_with()
+
+    def test_run_server_sse(self):
+        """Test SSE transport calls run with transport."""
+        with patch("app.mcp_server.mcp.run") as mock_run:
+            run_server("sse", "0.0.0.0", 8123)
+            mock_run.assert_called_once_with(transport="sse", host="0.0.0.0", port=8123)
+
+    def test_main_parses_args(self):
+        """Test CLI parsing for transport options."""
+        with patch("app.mcp_server.run_server") as mock_run_server:
+            main(["--transport", "sse", "--host", "0.0.0.0", "--port", "9000"])
+            mock_run_server.assert_called_once_with("sse", "0.0.0.0", 9000)
