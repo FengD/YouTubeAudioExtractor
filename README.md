@@ -30,6 +30,12 @@ sudo apt install -y ffmpeg
 pip install -r requirements.txt
 ```
 
+Environment variables are optional. A sample file is provided:
+
+```bash
+cp env.example .env
+```
+
 ### Run the Web Service
 
 ```bash
@@ -127,7 +133,7 @@ Run the MCP server over SSE for remote deployment:
 python -m app.mcp_server --transport sse --host 0.0.0.0 --port 8000
 ```
 
-Use your MCP client to connect to the server host and port. The exact SSE endpoints are managed by FastMCP.
+Use your MCP client to connect to the server host and port. The exact SSE endpoints are managed by FastMCP, and the host/port are configured when FastMCP is initialized.
 
 ![App screenshot](docs/mcp_use.png)
 
@@ -139,12 +145,20 @@ The service logs caller identity, request details, and success/failure status.
 - **Caller identity**: send `X-Client-Id: my-service` (preferred) or `X-Api-Key: ...` (partially logged)
 - **Log destination**: stdout + rotating file at `./logs/app.log` (configurable)
 
-Environment variables:
+### Environment Variables
 
-- **LOG_LEVEL**: `DEBUG|INFO|WARNING|ERROR` (default `INFO`)
-- **LOG_FORMAT**: `json|text` (default `json`)
-- **LOG_FILE**: path (default `./logs/app.log`)
-- **TRUST_PROXY_HEADERS**: set to `1` when running behind a proxy
+`env.example` lists all supported environment variables and sample values. Export them in your shell or use a `.env` loader in your process manager.
+
+- **LOG_LEVEL**: `DEBUG|INFO|WARNING|ERROR` (default `INFO`), controls log verbosity
+- **LOG_FORMAT**: `json|text` (default `json`), selects log output format
+- **LOG_FILE**: path (default `./logs/app.log`), log file destination
+- **TRUST_PROXY_HEADERS**: set to `1` when running behind a proxy to trust `X-Forwarded-*`
+- **YT_COOKIES_FILE**: path to exported `cookies.txt` for authenticated downloads
+- **YT_COOKIES_FROM_BROWSER**: browser name (e.g. `chrome`, `firefox`) to read cookies
+- **YT_USER_AGENT**: custom User-Agent string for requests to YouTube
+- **YT_PROXY**: proxy URL (e.g. `http://user:pass@host:port`) for outbound requests
+- **RUN_YT_INTEGRATION**: set to `1` to enable integration tests
+- **YOUTUBE_TEST_URL**: URL used by integration tests (default in `tests/test_integration.py`)
 
 ### Testing
 
@@ -166,7 +180,4 @@ pytest tests/test_integration.py -v
 
 - This app uses `yt-dlp` to download audio and `ffmpeg` to convert formats.
 - Some videos may be unavailable due to region/age restrictions or DRM.
-- Environment overrides:
-  - `YT_COOKIES_FILE`, `YT_COOKIES_FROM_BROWSER`
-  - `YT_USER_AGENT`, `YT_PROXY`
 
